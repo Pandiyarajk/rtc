@@ -1,89 +1,75 @@
-RTC Basics (Arduino/RTClib)
-===========================
+rtc
+===
 
-What an RTC does
-- Keeps calendar time with battery backup when the MCU sleeps or loses power.
-- Common chips: DS1307 (I2C, minute-level accuracy), DS3231 (I2C, temperature-compensated, much more accurate), PCF8523 (low-power).
+Standalone minimal RTC helper for DS1307/DS3231 over I2C. No RTClib dependency, no dynamic allocation, and no `String` usage. Provides only the essentials: init, running check, compile-time fallback set, explicit set, read, and signed adjustments. Maintained by `pandiyarajk`.
 
-Wiring (I2C)
-- VCC to 5V (or 3.3V if your board/chip supports it), GND to ground.
-- SDA → Arduino SDA pin (A4 on classic Uno), SCL → Arduino SCL pin (A5 on classic Uno).
-- Add the coin cell/battery so time persists when main power is off.
+Files
+- `library.properties` — Arduino library metadata.
+- `src/RTCManager.h/.cpp` — lightweight RTC class.
+- `keywords.txt` — Arduino IDE highlighting.
+- `examples/Basic/Basic.ino` — minimal usage.
+- `LICENSE` — MIT.
 
-RTClib quick reference
-- Create an instance: `RTC_DS1307 rtc;` (or `RTC_DS3231`, `RTC_PCF8523`).
-- `rtc.begin()` → returns `false` if the chip isn’t reachable on I2C.
-- `rtc.isrunning()` → `false` if oscillator stopped or time is unset.
-- `rtc.now()` → returns `DateTime` with current time.
-- `rtc.adjust(DateTime dt)` → writes a new time to the RTC (persists with battery).
-- `DateTime(F(__DATE__), F(__TIME__))` → compile-time timestamp.
-- `TimeSpan(days, hours, minutes, seconds)` → add/subtract durations (`DateTime + TimeSpan`).
+API (RTCManager)
+- `bool begin()` — init RTC, returns false if not found.
+- `bool isRunning()` — true if oscillator runs (checks CH bit).
+- `RTCStatus status() const` — last status code.
+- `bool setCompileTimeIfStopped()` — set to compile time if stopped.
+- `bool setTime(const SimpleDateTime& dt)` — write explicit time.
+- `bool adjustMinutes(int16_t delta)` — add/sub minutes (saturates at 2000-01-01).
+- `bool adjustSeconds(int32_t delta)` — add/sub seconds (saturates at 2000-01-01).
+- `bool readNow(SimpleDateTime& out)` — get current time.
 
-Minimal setup pattern
+Usage
 ```cpp
-#include <RTClib.h>
-RTC_DS1307 rtc;
+#include <RTCManager.h>
+
+RTCManager rtcMgr;
 
 void setup() {
   Serial.begin(9600);
-  if (!rtc.begin()) {
-    Serial.println(F("Couldn't find RTC"));
+  if (!rtcMgr.begin()) {
+    Serial.println(F("RTC not found"));
     while (1);
   }
+  rtcMgr.setCompileTimeIfStopped(); // optional first-time set
+}
 
-  if (!rtc.isrunning()) {
-    Serial.println(F("RTC not running, setting to compile time"));
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+void loop() {
+  SimpleDateTime now;
+  if (rtcMgr.readNow(now)) {
+    Serial.print(now.hour); Serial.print(':');
+    Serial.print(now.minute); Serial.print(':');
+    Serial.println(now.second);
   }
+  delay(1000);
 }
 ```
 
-Read the time
+Adjust time examples
 ```cpp
-DateTime now = rtc.now();
-Serial.print(now.year());  Serial.print('/');
-Serial.print(now.month()); Serial.print('/');
-Serial.print(now.day());   Serial.print(' ');
-Serial.print(now.hour());  Serial.print(':');
-Serial.print(now.minute());Serial.print(':');
-Serial.println(now.second());
+rtcMgr.adjustMinutes(3);    // add 3 minutes
+rtcMgr.adjustMinutes(-5);   // subtract 5 minutes
+rtcMgr.adjustSeconds(90);   // add 90 seconds
+rtcMgr.setTime(SimpleDateTime{2025, 12, 8, 17, 41, 0}); // explicit set
 ```
 
-Set to an explicit timestamp
-```cpp
-rtc.adjust(DateTime(2025, 12, 8, 17, 41, 0)); // YYYY, M, D, H, M, S
-```
+Status codes
+- `RTC_STATUS_OK`
+- `RTC_STATUS_NOT_FOUND`
+- `RTC_STATUS_NOT_RUNNING`
+- `RTC_STATUS_SET_COMPILE_TIME`
 
-Add or subtract time (e.g., adjust by minutes)
-```cpp
-DateTime current = rtc.now();
-rtc.adjust(current + TimeSpan(0, 0, 5, 0));   // add 5 minutes
-rtc.adjust(current + TimeSpan(0, 0, -3, 0));  // subtract 3 minutes
-```
+Notes
+- Uses `Wire` only; keep coin-cell fresh for persistence.
+- DS3231 offers better accuracy than DS1307; both share the same register layout for basic time-keeping.
 
-Check for missing RTC or stopped oscillator
-```cpp
-if (!rtc.begin()) {
-  Serial.println(F("RTC missing"));
-}
-if (!rtc.isrunning()) {
-  Serial.println(F("Oscillator stopped; set the time"));
-}
-```
+Installing (local ZIP)
+- Zip the `rtc_lib` folder (ensure `library.properties` is at root of zip).
+- Arduino IDE: Sketch → Include Library → Add .ZIP Library.
 
-Epoch and convenience helpers
-```cpp
-DateTime now = rtc.now();
-uint32_t ts = now.unixtime(); // seconds since 1970-01-01
-DateTime later(ts + 3600);    // 1 hour later via unix time
-```
-
-Accuracy and drift
-- DS1307 can drift (tens of seconds per day). DS3231 is far better (±2 ppm typical).
-- For DS1307, plan to resync periodically (manual command, NTP gateway, or GPS).
-- Ensure the coin cell is good; dead battery means time will reset.
-
-Daylight-saving or offsets
-- Store local offset separately; keep RTC in UTC if you can, then apply offsets in code.
-- For fixed offsets, you can adjust with `TimeSpan` when displaying or on demand.
+Preparing for Arduino Library Manager
+- Set `url` in `library.properties` to the public GitHub repo.
+- Commit/push, tag a release matching `version` (e.g., v1.1.0).
+- Open an issue at https://github.com/arduino/library-registry with the repo URL.
 
