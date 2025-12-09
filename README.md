@@ -67,9 +67,3 @@ Notes
 Installing (local ZIP)
 - Zip the `rtc_lib` folder (ensure `library.properties` is at root of zip).
 - Arduino IDE: Sketch → Include Library → Add .ZIP Library.
-
-Preparing for Arduino Library Manager
-- Set `url` in `library.properties` to the public GitHub repo.
-- Commit/push, tag a release matching `version` (e.g., v1.0.0).
-- Open an issue at https://github.com/arduino/library-registry with the repo URL.
-
