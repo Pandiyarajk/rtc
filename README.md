@@ -70,6 +70,6 @@ Installing (local ZIP)
 
 Preparing for Arduino Library Manager
 - Set `url` in `library.properties` to the public GitHub repo.
-- Commit/push, tag a release matching `version` (e.g., v1.1.0).
+- Commit/push, tag a release matching `version` (e.g., v1.0.0).
 - Open an issue at https://github.com/arduino/library-registry with the repo URL.
 
