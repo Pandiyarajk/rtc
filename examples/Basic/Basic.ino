@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include <RTCManager.h>
+#include <rtc.h>
 
 RTCManager rtcMgr;
 
