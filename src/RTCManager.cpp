@@ -1,4 +1,4 @@
-#include "../rtc.h"
+#include "rtc.h"
 
 // DS1307/DS3231 share the same base address
 static const uint8_t RTC_I2C_ADDR = 0x68;
